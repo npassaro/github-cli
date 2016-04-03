@@ -4,7 +4,7 @@ import net.caoticode.buhtig.Converters._
 import org.json4s.native.JsonMethods._
 import org.json4s._
 object Client extends App {
-  val token = "6b80d83b0d184d119f24a55ea2dbcc221d025c05" // your personal API token
+  val token = sys.env("GITHUB_TOKEN")
   val buhtig = new Buhtig(token)
   val client = buhtig.syncClient
   val deltaworx = client.orgs.Deltaworx.repos.get[JSON]
