@@ -1,49 +1,56 @@
 package org.github
+
+import java.time._
+
 import net.caoticode.buhtig.Buhtig
 import net.caoticode.buhtig.Converters._
+
 import org.json4s.native.JsonMethods._
 import org.json4s._
-object Client extends App {
-  val token = sys.env("GITHUB_TOKEN")
-  val buhtig = new Buhtig(token)
-  val client = buhtig.syncClient
-  val deltaworx = client.orgs.Deltaworx.repos.get[JSON]
 
-  def f(repo: Repo) = println(s"<${repo.id},${repo.name}>")
+object Client {
+  def main(args: Array[String]): Unit = {
+    args.foreach(println)
+    def normAssignee(value: Option[Assignee]) = value.getOrElse(new Assignee(""))
+    def normLabel(value: Option[Label]) = value.getOrElse(new Label(""))
+    def normMilestone(value: Option[Milestone]) = value.getOrElse(new Milestone(""))
 
-  val regex = """.*\(spent:\s?(\d+\.?\d{0,2})\).*""".r
-
-  def printIssues(repoName: String, issues: List[Issue]) = {
-    issues.foreach { issue =>
-      regex.findAllIn(issue.title).matchData foreach {
-        m => println(m.group(1))
+    def printIssues(repoName: String, issues: List[Issue]): List[String] = {
+      val regex = """.*\(spent:\s?(\d+\.?\d{0,2})\).*""".r
+      issues.map { issue =>
+        val spentTime = (for (m <- regex findFirstMatchIn issue.title) yield m group 1).getOrElse("0")
+        val result = s"${repoName},${issue.labels.map(normLabel(_).name).mkString(";")},${issue.number},${issue.title},${normAssignee(issue.assignee).login},${spentTime},${issue.state},${normMilestone(issue.milestone).title},\n"
+        result.mkString
       }
+
     }
-  }
 
-  implicit val formats = DefaultFormats
+    def printIssuesInEachRepo(): List[String] = {
+      val token = sys.env("GITHUB_TOKEN")
+      val buhtig = new Buhtig(token)
+      val client = buhtig.syncClient
+      val deltaworx = client.orgs.Deltaworx.repos.get[JSON]
 
-  case class Repo(id: Int, name: String)
-  case class Assignee(login: String)
-  case class Milestone(title: String)
-  case class Issue(title: String, assignee: Assignee, milestone: Milestone)
+      implicit val formats = DefaultFormats
+      val repos = deltaworx.camelizeKeys.extract[List[Repo]]
+      val issuesPerRepo = repos.flatMap { repo =>
+        (client.repos("Deltaworx", repo.name).issues ? ("state" -> "open")).getOpt[JSON] match {
+          case Some(req) => printIssues(repo.name, req.camelizeKeys.extract[List[Issue]])
+          case None => List(s"${repo.name},,,")
+        }
+      }
 
-  println("=====DELTAWORX=====")
-
-  val repos = deltaworx.camelizeKeys.extract[List[Repo]]
-
-  val issuesPerRepo = repos.map { repo =>
-    (client.repos("Deltaworx", repo.name).issues ? ("milestone" -> "1", "state" -> "closed")).getOpt[JSON] match {
-      case Some(req) => printIssues(repo.name, req.camelizeKeys.extract[List[Issue]])
-      case None => println(s"${repo.name},,,")
+      buhtig.close()
+      issuesPerRepo
     }
-  }
 
-  buhtig.close()
+    val f = new ResultsWriter("results.csv", printIssuesInEachRepo)
+    f.writeResults
+  }
 }
 
-// foreach { issue =>
-//   issue match {
-//     case Issue(title, assignee, milestone) => println(s"${title}")
-//   }
-// }
+case class Repo(id: Int, name: String)
+case class Assignee(login: String)
+case class Milestone(title: String)
+case class Label(name: String)
+case class Issue(number: Int, title: String, assignee: Option[Assignee], milestone: Option[Milestone], createdAt: String, state: String, labels: List[Option[Label]])
