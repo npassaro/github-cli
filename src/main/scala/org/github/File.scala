@@ -1,17 +1,14 @@
 package org.github
 
-import java.io._
+import scala.tools.nsc.io._
 
 class ResultsWriter(filePathC: String, contentsC: List[String]) {
   val filePath = filePathC
   val contents = contentsC
 
   def writeResults = {
-    val writer = new PrintWriter(new File(filePath))
-
     contents.foreach { line =>
-      writer.write(line.toString)
+      File(filePath).appendAll(s"${line.toString}\n")
     }
-    writer.close
   }
 }
