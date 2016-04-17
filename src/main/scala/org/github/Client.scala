@@ -1,11 +1,9 @@
 package org.github
 
-import java.time._
-
 import net.caoticode.buhtig.Buhtig
 import net.caoticode.buhtig.Converters._
+import net.caoticode.buhtig.SyncClient
 
-import org.json4s.native.JsonMethods._
 import org.json4s._
 
 object Client {
