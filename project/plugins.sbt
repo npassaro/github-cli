@@ -9,3 +9,5 @@ addSbtPlugin("me.lessis" % "bintray-sbt" % "0.1.1")
 resolvers += Classpaths.sbtPluginReleases
 
 addSbtPlugin("au.com.onegeek" %% "sbt-dotenv" % "1.1.33")
+
+addSbtPlugin("org.ensime" % "ensime-sbt" % "0.4.0")
