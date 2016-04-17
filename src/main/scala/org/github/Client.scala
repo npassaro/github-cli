@@ -17,7 +17,12 @@ object Client {
       val regex = """.*\(spent:\s?(\d+\.?\d{0,2})\).*""".r
       issues.map { issue =>
         val spentTime = (for (m <- regex findFirstMatchIn issue.title) yield m group 1).getOrElse("0")
-        val result = s"${repoName},${issue.labels.map(normLabel(_).name).mkString(";")},${issue.number},${issue.title},${normAssignee(issue.assignee).login},${spentTime},${issue.state},${normMilestone(issue.milestone).title},\n"
+
+        val labels = issue.labels.map(normLabel(_).name).mkString(";")
+        val assignee = normAssignee(issue.assignee).login
+        val milestoneName = normMilestone(issue.milestone).title
+
+        val result = s"${repoName}\t${labels}\t${issue.number}\t${issue.title}\t${assignee}\t${spentTime}\t${issue.state}\t${milestoneName}"
         result.mkString
       }
 
