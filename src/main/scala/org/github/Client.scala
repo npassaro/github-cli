@@ -27,28 +27,38 @@ object Client {
       }
 
     }
-
-    def printIssuesInEachRepo(): List[String] = {
+    def init: (SyncClient, Buhtig) = {
       val token = sys.env("GITHUB_TOKEN")
       val buhtig = new Buhtig(token)
       val client = buhtig.syncClient
+      (client, buhtig)
+    }
+
+    def issuesPerRepo(client: SyncClient, page: Int = 1): List[String] = {
       val deltaworx = client.orgs.Deltaworx.repos.get[JSON]
 
       implicit val formats = DefaultFormats
       val repos = deltaworx.camelizeKeys.extract[List[Repo]]
-      val issuesPerRepo = repos.flatMap { repo =>
-        (client.repos("Deltaworx", repo.name).issues ? ("state" -> "open")).getOpt[JSON] match {
+      val issues = repos.flatMap { repo =>
+        (client.repos("Deltaworx", repo.name).issues ? ("since" -> "2016-04-04T00:00:00Z", "state" -> "all", "page" -> s"${page}")).getOpt[JSON] match {
           case Some(req) => printIssues(repo.name, req.camelizeKeys.extract[List[Issue]])
-          case None => List(s"${repo.name},,,")
+          case None => List(" ")
         }
       }
 
-      buhtig.close()
-      issuesPerRepo
+      println(s"Number of issues: ${issues.length}")
+      issues
     }
 
-    val f = new ResultsWriter("results.csv", printIssuesInEachRepo)
-    f.writeResults
+    val (client, buhtig) = init
+    val f = new ResultsWriter("results.csv", List("repo\tlabels\tid\ttitle\tassignee\tspent\tstate\tmilestone"))
+    var i = 0
+    do {
+      i += 1
+      f.contents = issuesPerRepo(client, i)
+      f.writeResults
+    } while (f.contents.length > 0)
+    buhtig.close
   }
 }
 
