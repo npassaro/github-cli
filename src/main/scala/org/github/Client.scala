@@ -9,12 +9,14 @@ import org.json4s._
 object Client {
   def main(args: Array[String]): Unit = {
     args.foreach(println)
+
     def normAssignee(value: Option[Assignee]) = value.getOrElse(new Assignee(""))
     def normLabel(value: Option[Label]) = value.getOrElse(new Label(""))
     def normMilestone(value: Option[Milestone]) = value.getOrElse(new Milestone(""))
 
     def printIssues(repoName: String, issues: List[Issue]): List[String] = {
       val regex = """.*\(spent:\s?(\d+\.?\d{0,2})\).*""".r
+
       issues.map { issue =>
         val spentTime = (for (m <- regex findFirstMatchIn issue.title) yield m group 1).getOrElse("0")
 
